@@ -1,5 +1,10 @@
 'use server'
 import {z} from 'zod';
+import {auth} from '@/auth';
+import type {Topic} from '@prisma/client';
+import { redirect } from 'next/navigation';
+import { db } from '@/db';
+import paths from '@/paths';
 
 const createTopicSchema = z.object({
     name: z.string().min(3).regex(/[a-z-]+$/, {message: 'Must be lowercase letters or dashes without spaces'}),
@@ -10,6 +15,7 @@ interface CreateTopicFormState{
     errors:{
         name?: string[];
         description?: string[];
+        _form?: string[];
     }
 }
 
@@ -23,6 +29,16 @@ export async function createTopic(formState: CreateTopicFormState,formData: Form
     if(!result.success){
         return {errors: result.error.flatten().fieldErrors,};
     }
+
+    const session = await auth();
+    if (!session || !session.user){
+        return{
+            errors:{
+                _form: ['you must be signed in to do this.'],
+            },
+        };
+    }
+
     return{
         errors:{},
     };
